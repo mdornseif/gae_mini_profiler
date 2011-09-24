@@ -1,10 +1,13 @@
 from google.appengine.api import users
 
+# Set to `False` if you don't use Django templates
+enable_django_templatetags = True
+
 # If using the default should_profile implementation, the profiler
 # will only be enabled for requests made by the following GAE users.
 enabled_profiler_emails = [
-    "test@example.com",
-    "test1@example.com",
+    "test@example.invalid",
+    "test1@example.invalid",
 ]
 
 enable_profiler_admins = True
