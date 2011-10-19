@@ -1,24 +1,26 @@
 import datetime
-import time
 import logging
 import os
 import pickle
 import re
+import StringIO
+import time
+import zlib
+from pprint import pformat
+from types import GeneratorType
+
+from google.appengine.api import memcache
+from google.appengine.ext.webapp import template, RequestHandler
+
+import cleanup
+import cookies
+import unformatter
+
 try:
     import json
 except ImportError:
     import simplejson as json
-import StringIO
-from types import GeneratorType
-import zlib
 
-from google.appengine.ext.webapp import template, RequestHandler
-from google.appengine.api import memcache
-
-import unformatter
-from pprint import pformat
-import cleanup
-import cookies
 
 import gae_mini_profiler.config
 if os.environ["SERVER_SOFTWARE"].startswith("Devel"):
@@ -381,11 +383,12 @@ class ProfilerWSGIMiddleware(object):
                 old_app = self.app
                 def wrapped_appstats_app(environ, start_response):
                     # Use this wrapper to grab the app stats recorder for RequestStats.save()
-
-                    if hasattr(recording.recorder, "get_for_current_request"):
-                        self.recorder = recording.recorder.get_for_current_request()
-                    else:
+                    # on python27 we have a recorder_proxy on older runtimes a recorder
+                    self.recorder = getattr(recording, 'recorder_proxy', None)
+                    if not self.recorder:
                         self.recorder = recording.recorder
+                    if hasattr(self.recorder, "get_for_current_request"):
+                        self.recorder = self.recorder.get_for_current_request()
 
                     return old_app(environ, start_response)
                 self.app = recording.appstats_wsgi_middleware(wrapped_appstats_app)
@@ -397,7 +400,10 @@ class ProfilerWSGIMiddleware(object):
                 # Get profiled wsgi result
                 result = self.prof.runcall(lambda *args, **kwargs: self.app(environ, profiled_start_response), None, None)
 
-                self.recorder = recording.recorder
+                # on python27 we have a recorder_proxy on older runtimes a recorder
+                self.recorder = getattr(recording, 'recorder_proxy', None)
+                if not self.recorder:
+                    self.recorder = recording.recorder
 
                 # If we're dealing w/ a generator, profile all of the .next calls as well
                 if type(result) == GeneratorType:

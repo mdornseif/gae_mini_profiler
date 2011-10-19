@@ -1,15 +1,14 @@
 import logging
 import os
 
+from google.appengine.ext import webapp
+
+from gae_mini_profiler import profiler
+
 try:
     import json
 except ImportError:
     import simplejson as json
-
-
-from google.appengine.ext import webapp
-
-from gae_mini_profiler import profiler
 
 register = webapp.template.create_template_register()
 
