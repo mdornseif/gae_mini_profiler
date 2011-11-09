@@ -2,7 +2,10 @@ import datetime
 import os
 import pickle
 import re
-import simplejson
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import StringIO
 from types import GeneratorType
 import zlib
@@ -65,7 +68,7 @@ class RequestStatsHandler(RequestHandler):
                     request_stats.disabled = True
                     request_stats.store()
 
-        self.response.out.write(simplejson.dumps(list_request_stats))
+        self.response.out.write(json.dumps(list_request_stats))
 
 
 class RequestStats(object):

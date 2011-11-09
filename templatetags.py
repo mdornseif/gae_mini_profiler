@@ -1,4 +1,7 @@
-import simplejson
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import os
 
 from google.appengine.ext.webapp import template
@@ -19,7 +22,7 @@ def profiler_includes_request_id(request_id, show_immediately=False):
         "request_id": request_id,
         "js_path": "/gae_mini_profiler/static/js/profiler.js",
         "css_path": "/gae_mini_profiler/static/css/profiler.css",
-        "show_immediately_js": simplejson.dumps(show_immediately),
+        "show_immediately_js": json.dumps(show_immediately),
     })
 
 
