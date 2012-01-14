@@ -3,6 +3,7 @@
     padding: 4px;
     cursor: pointer;
     text-align: right;
+    z-index: 10001;
 }
 
 .g-m-p-corner .ms,
