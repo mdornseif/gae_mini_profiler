@@ -349,6 +349,7 @@ class ProfilerWSGIMiddleware(object):
                 # Append headers used when displaying profiler results from ajax requests
                 headers.append(("X-MiniProfiler-Id", request_id))
                 headers.append(("X-MiniProfiler-QS", environ.get("QUERY_STRING")))
+                headers.append(('Set-Cookie', 'MiniProfilerId=%s; Max-Age=10' % request_id))
 
                 return start_response(status, headers, exc_info)
 
