@@ -1,3 +1,4 @@
+import base64
 import datetime
 import logging
 import os
@@ -29,7 +30,21 @@ else:
     config = gae_mini_profiler.config.ProfilerConfigProduction
 
 # request_id is a per-request identifier accessed by a couple other pieces of gae_mini_profiler
-request_id = None
+
+class Borg:
+    """Something like a Singelton the Python way"""
+    __shared_state = {}
+    def __init__(self):
+        self.__dict__ = self.__shared_state
+
+    def get_id(self):
+        """Get teh ID of the currently served request."""
+        if 'request_id' not in self.__shared_state:
+            # Set a random ID for this request so we can look up stats later
+            self.request_id = base64.urlsafe_b64encode(os.urandom(5))
+        return self.request_id
+requeststore = Borg()
+
 
 class SharedStatsHandler(RequestHandler):
 
@@ -112,7 +127,6 @@ class RequestStats(object):
         # Store compressed results so we stay under the memcache 1MB limit
         pickled = pickle.dumps(self)
         compressed_pickled = zlib.compress(pickled)
-
         return memcache.set(RequestStats.memcache_key(self.request_id), compressed_pickled)
 
     @staticmethod
@@ -319,9 +333,6 @@ class ProfilerWSGIMiddleware(object):
 
     def __call__(self, environ, start_response):
 
-        global request_id
-        request_id = None
-
         # Start w/ a non-profiled app at the beginning of each request
         self.app = self.app_clean
         self.prof = None
@@ -331,10 +342,6 @@ class ProfilerWSGIMiddleware(object):
 
         # Never profile calls to the profiler itself to avoid endless recursion.
         if config.should_profile(environ) and not environ.get("PATH_INFO", "").startswith("/gae_mini_profiler/"):
-
-            # Set a random ID for this request so we can look up stats later
-            import base64
-            request_id = base64.urlsafe_b64encode(os.urandom(5))
 
             # Send request id in headers so jQuery ajax calls can pick
             # up profiles.
@@ -347,7 +354,7 @@ class ProfilerWSGIMiddleware(object):
                     self.temporary_redirect = True
 
                 # Append headers used when displaying profiler results from ajax requests
-                headers.append(("X-MiniProfiler-Id", request_id))
+                headers.append(("X-MiniProfiler-Id", requeststore.get_id()))
                 headers.append(("X-MiniProfiler-QS", environ.get("QUERY_STRING")))
 
                 return start_response(status, headers, exc_info)
@@ -382,7 +389,7 @@ class ProfilerWSGIMiddleware(object):
                 # Turn on AppStats monitoring for this request
                 old_app = self.app
                 def wrapped_appstats_app(environ, start_response):
-                    # Use this wrapper to grab the app stats recorder for RequestStats.save()
+                    # Use this wrapper to grab the app stats recorder for RequestStats.store()
                     # on python27 we have a recorder_proxy on older runtimes a recorder
                     self.recorder = getattr(recording, 'recorder_proxy', None)
                     if not self.recorder:
@@ -399,11 +406,6 @@ class ProfilerWSGIMiddleware(object):
 
                 # Get profiled wsgi result
                 result = self.prof.runcall(lambda *args, **kwargs: self.app(environ, profiled_start_response), None, None)
-
-                # on python27 we have a recorder_proxy on older runtimes a recorder
-                self.recorder = getattr(recording, 'recorder_proxy', None)
-                if not self.recorder:
-                    self.recorder = recording.recorder
 
                 # If we're dealing w/ a generator, profile all of the .next calls as well
                 if type(result) == GeneratorType:
@@ -424,12 +426,11 @@ class ProfilerWSGIMiddleware(object):
                 self.handler = None
 
             # Store stats for later access
-            RequestStats(request_id, environ, self).store()
+            RequestStats(requeststore.get_id(), environ, self).store()
 
             # Just in case we're using up memory in the recorder and profiler
             self.recorder = None
             self.prof = None
-            request_id = None
 
         else:
             result = self.app(environ, start_response)
