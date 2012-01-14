@@ -22,7 +22,6 @@ try:
 except ImportError:
     import simplejson as json
 
-
 if os.environ["SERVER_SOFTWARE"].startswith("Devel"):
     config = _config.ConfigDevelopment
 else:
