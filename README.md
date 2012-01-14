@@ -25,7 +25,7 @@ You can play around with one of GAE's sample applications with gae_mini_profiler
 <img src="http://gae-mini-profiler.appspot.com/images/gae-mini-profiler/rpc.png"/><br/><em>...about remote procedure call performance...</em><br/><br/>
 <img src="http://gae-mini-profiler.appspot.com/images/gae-mini-profiler/profile.png"/><br/><em>...or standard profiler output.</em><br/><br/>
 <img src="http://gae-mini-profiler.appspot.com/images/gae-mini-profiler/ajax-corner.png?test"/><br/><em>Ajax requests are also profiled and details made available as they are received.</em><br/><br/>
-<img src="http://i.imgur.com/SG0dp.png"/><br/><em>Any Python logging module output is also available for easy access.</em>
+<img src="http://i.imgur.com/SG0dp.png"/><br/><em>And Python logging module output is also available for easy access.</em>
 
 ## <a name="start">Getting Started</a>
 
@@ -46,13 +46,23 @@ application = webapp.WSGIApplication(...existing application...)<br/>
 from gae_mini_profiler import profiler
 application = profiler.ProfilerWSGIMiddleware(application)
 </pre>
-4. Insert the `profiler_includes` template tag below jQuery somewhere (preferably at the end of your template):
+4. If you use Django Templates insert the `profiler_includes` template tag below jQuery somewhere (preferably at the end of your template):
 <pre>
         ...your html...
         {% profiler_includes %}
     &lt;/body&gt;
 &lt;/html&gt;
 </pre>
+
+Alternatively you can hardcode the call on any template system:
+
+    <link rel="stylesheet" type="text/css" href="/gae_mini_profiler/static/css/profiler.css" />
+    <script type="text/javascript" src="/gae_mini_profiler/static/js/profiler.js"></script>
+    <script type="text/javascript">GaeMiniProfiler.init(jQuery.cookiePlugin('MiniProfilerId'), false)</script>
+
+If you use the static inclusion you probably should use your template engine to include the code only
+for admins or other profiling-prone users.
+
 5. You're all set! Just choose the users for whom you'd like to enable profiling in `gae_mini_profiler/config.py`:
 <pre>
 &#35; If using the default should_profile implementation, the profiler
