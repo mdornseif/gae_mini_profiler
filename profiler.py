@@ -1,10 +1,20 @@
+import datetime
 import os
-import simplejson
+import pickle
+import re
+try:
+    import json
+except ImportError:
+    import simplejson as json
+import StringIO
+from types import GeneratorType
+import zlib
 
 from google.appengine.ext.webapp import RequestHandler
 
 from gae_mini_profiler import config
 from gae_mini_profiler.middleware import ProfilerWSGIMiddleware, RequestStats
+
 
 
 class SharedStatsHandler(RequestHandler):
@@ -23,6 +33,7 @@ class SharedStatsHandler(RequestHandler):
                 "request_id": request_id
             })
         )
+
 
 class RequestStatsHandler(RequestHandler):
 
@@ -56,4 +67,4 @@ class RequestStatsHandler(RequestHandler):
                     request_stats.disabled = True
                     request_stats.store()
 
-        self.response.out.write(simplejson.dumps(list_request_stats))
+        self.response.out.write(json.dumps(list_request_stats))
