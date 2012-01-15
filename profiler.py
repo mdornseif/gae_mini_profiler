@@ -5,6 +5,7 @@ import os
 import pickle
 import re
 import StringIO
+import threading
 import time
 import zlib
 from pprint import pformat
@@ -38,11 +39,15 @@ class Borg:
         self.__dict__ = self.__shared_state
 
     def get_id(self):
-        """Get teh ID of the currently served request."""
-        if 'request_id' not in self.__shared_state:
+        """Get the ID of the currently served request."""
+        # This allows us to have different request IDs per thread even within a single process
+        # Works also in single-threaded Applications.
+        if 'thread_local_storage' not in self.__shared_state:
+            self.thread_local_storage = threading.local()
+        if 'request_id' not in self.thread_local_storage:
             # Set a random ID for this request so we can look up stats later
-            self.request_id = base64.urlsafe_b64encode(os.urandom(5))
-        return self.request_id
+            self.thread_local_storage.request_id = base64.urlsafe_b64encode(os.urandom(5))
+        return self.thread_local_storage.request_id
 requeststore = Borg()
 
 
