@@ -11,7 +11,9 @@ import zlib
 from pprint import pformat
 from types import GeneratorType
 
+from google.appengine.api import lib_config
 from google.appengine.api import memcache
+from google.appengine.api import users
 from google.appengine.ext.webapp import template, RequestHandler
 
 import cleanup
@@ -24,12 +26,31 @@ try:
 except ImportError:
     import simplejson as json
 
-if os.environ["SERVER_SOFTWARE"].startswith("Devel"):
-    config = _config.ConfigDevelopment
-else:
-    config = _config.ConfigProduction
 
-# request_id is a per-request identifier accessed by a couple other pieces of gae_mini_profiler
+def default_should_profile(environ):
+    """Default implementation for profiling descision:"""
+
+    # if gae_mini_profiler_ENABLED_PROFILER_EMAILS in appengine_config.py is set,
+    # only profile requests from that users.
+    # e.g. gae_mini_profiler_ENABLED_PROFILER_EMAILS = ['joe@example.com']
+    if _config.ENABLED_PROFILER_EMAILS:
+        user = users.get_current_user()
+        return user and user.email() in _config.ENABLED_PROFILER_EMAILS
+
+    # On Development Server always profile
+    if os.environ["SERVER_SOFTWARE"].startswith("Devel"):
+        return True
+
+    # If nothing is configured, enable profiling for Admins.
+    if users.is_current_user_admin():
+        return True
+
+
+# see http://code.google.com/appengine/docs/python/tools/appengineconfig.html
+_config = lib_config.register('gae_mini_profiler',
+                              {'ENABLED_PROFILER_EMAILS': [],
+                               'should_profile': default_should_profile})
+
 
 class Borg:
     """Something like a Singelton the Python way"""
@@ -43,7 +64,7 @@ class Borg:
         # Works also in single-threaded Applications.
         if 'thread_local_storage' not in self.__shared_state:
             self.thread_local_storage = threading.local()
-        if 'request_id' not in self.thread_local_storage:
+        if 'request_id' not in self.thread_local_storage.__dict__:
             # Set a random ID for this request so we can look up stats later
             self.thread_local_storage.request_id = base64.urlsafe_b64encode(os.urandom(5))
         return self.thread_local_storage.request_id
@@ -345,7 +366,7 @@ class ProfilerWSGIMiddleware(object):
         self.simple_timing = cookies.get_cookie_value("g-m-p-disabled") == "1"
 
         # Never profile calls to the profiler itself to avoid endless recursion.
-        if config.should_profile(environ) and not environ.get("PATH_INFO", "").startswith("/gae_mini_profiler/"):
+        if _config.should_profile(environ) and not environ.get("PATH_INFO", "").startswith("/gae_mini_profiler/"):
 
             # Send request id in headers so jQuery ajax calls can pick
             # up profiles.
@@ -360,7 +381,7 @@ class ProfilerWSGIMiddleware(object):
                 # Append headers used when displaying profiler results from ajax requests
                 headers.append(("X-MiniProfiler-Id", requeststore.get_id()))
                 headers.append(("X-MiniProfiler-QS", environ.get("QUERY_STRING")))
-                headers.append(('Set-Cookie', 'MiniProfilerId=%s; Max-Age=10' % request_id))
+                headers.append(('Set-Cookie', 'MiniProfilerId=%s; Max-Age=1' % requeststore.get_id()))
 
                 return start_response(status, headers, exc_info)
 
@@ -438,6 +459,7 @@ class ProfilerWSGIMiddleware(object):
             self.prof = None
 
         else:
+            logging.info("no profiling")
             result = self.app(environ, start_response)
             for value in result:
                 yield value

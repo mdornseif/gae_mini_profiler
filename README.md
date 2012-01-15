@@ -65,12 +65,12 @@ You can play around with one of GAE's sample applications with gae_mini_profiler
     If you use the static inclusion you probably should use your template engine to include the code only
 for admins or other profiling-prone users.
 
-5. You're all set! Just choose the users for whom you'd like to enable profiling by putting the respective E-Mail addresses in `appengine_config.py`:
+5. You're all set! Per default on the Development Server all requests are profiled an on Production only users with access to the AppEngine Admin console are profiled.  Just can change that to choose the users for whom you'd like to enable profiling by putting the respective E-Mail addresses in `appengine_config.py`:
 
-            gae_mini_profiler_ENABLED_PROFILER_EMAILS = ['user1@example.com',
-                                                         'user2@example.com']
+        gae_mini_profiler_ENABLED_PROFILER_EMAILS = ['user1@example.com',
+                                                     'user2@example.com']
 
-For more sophisticated choice of what to profile check `gae_mini_profiler/config.py`.
+You van also define `gae_mini_profiler_should_profile(environ)` in `appengine_config.py` to get morde detailed control over what to profile.
 
 
 ## <a name="features">Features</a>
