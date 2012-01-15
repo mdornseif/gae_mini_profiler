@@ -28,6 +28,6 @@ def profiler_includes_request_id(request_id, show_immediately = False):
 
 @register.simple_tag
 def profiler_includes():
-    return profiler_includes_request_id(profiler.request_id)
+    return profiler_includes_request_id(profiler.requeststore.get_id())
 
 
