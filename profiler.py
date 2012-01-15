@@ -511,10 +511,10 @@ class ProfilerWSGIMiddleware(object):
                 reg = re.compile("mp-r-id=([^&]+)")
 
                 # Keep any chain of redirects around
-                request_id_chain = request_id
+                request_id_chain = requeststore.get_id()
                 match = reg.search(environ.get("QUERY_STRING"))
                 if match:
-                    request_id_chain = ",".join([match.groups()[0], request_id])
+                    request_id_chain = ",".join([match.groups()[0], requeststore.get_id()])
 
                 # Remove any pre-existing miniprofiler redirect id
                 location = header[1]
