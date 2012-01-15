@@ -19,7 +19,6 @@ from google.appengine.ext.webapp import template, RequestHandler
 import cleanup
 import cookies
 import unformatter
-from gae_mini_profiler.config import _config
 
 try:
     import json
