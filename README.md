@@ -29,23 +29,31 @@ You can play around with one of GAE's sample applications with gae_mini_profiler
 
 ## <a name="start">Getting Started</a>
 
-1. Download this repository's source and copy the `gae_mini_profiler/` folder into your App Engine project's root directory.
+1. Download this repository's source by typing in your App Engine project's root directory.
+        mkdir -p lib
+        echo "import os.path" > lib/__init__.py
+        echo "import site" >> lib/__init__.py
+        echo "site.addsitedir(os.path.dirname(__file__))" >> lib/__init__.py
+        git submodule add https://github.com/kamens/gae_mini_profiler.git lib/gae_mini_profiler
+
 
 2. Add the following two handler definitions to `app.yaml`:
 
         handlers:
         - url: /gae_mini_profiler/static
-          static_dir: gae_mini_profiler/static
+          static_dir: lib/gae_mini_profiler/static
         - url: /gae_mini_profiler/.*
-          script: gae_mini_profiler/main.py
+          script: gae_mini_profiler.main.application
 
 3. Modify the WSGI application you want to profile by wrapping it with the gae_mini_profiler WSGI application. This is usually done in `appengien_config.py`:
 
-        import gaetk.gaesessions
-        gae_mini_profiler_ENABLED_PROFILER_EMAILS = ['m.dornseif@hudora.de']
+        import lib
+        import gae_mini_profiler.profiler
+        gae_mini_profiler_ENABLED_PROFILER_EMAILS = ['you@example.com']
 
         def webapp_add_wsgi_middleware(app):
             """Called with each WSGI handler initialisation"""
+            # this also enables `ecording.appstats_wsgi_middleware(app)`
             app = gae_mini_profiler.profiler.ProfilerWSGIMiddleware(app)
             return app
 
@@ -62,8 +70,7 @@ You can play around with one of GAE's sample applications with gae_mini_profiler
         <script type="text/javascript" src="/gae_mini_profiler/static/js/profiler.js"></script>
         <script type="text/javascript">GaeMiniProfiler.init(jQuery.cookiePlugin('MiniProfilerId'), false)</script>
 
-    If you use the static inclusion you probably should use your template engine to include the code only
-for admins or other profiling-prone users.
+    If you use the static inclusion you probably should use your template engine to include the code only for admins or other profiling-prone users.
 
 5. You're all set! Per default on the Development Server all requests are profiled an on Production only users with access to the AppEngine Admin console are profiled.  Just can change that to choose the users for whom you'd like to enable profiling by putting the respective E-Mail addresses in `appengine_config.py`:
 
